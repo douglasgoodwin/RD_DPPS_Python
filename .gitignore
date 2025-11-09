@@ -1,0 +1,56 @@
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.venv/
+env/
+.env/
+
+# IDE-specific files (e.g., PyCharm, VS Code)
+.idea/
+.vscode/
+
+# Editor backup files
+*~
+*.bak
+
+# macOS-specific files
+.DS_Store
+
+# Log files
+*.log
+
+# Sensitive information (e.g., API keys, configuration files)
+config.ini
+.env
+
+### macOS ###
+*.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
