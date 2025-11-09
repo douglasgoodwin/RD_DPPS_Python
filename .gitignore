@@ -1,3 +1,9 @@
+# output files
+quick_test_output/*
+
+
+.python-version
+
 # Compiled Python files
 __pycache__/
 *.pyc
