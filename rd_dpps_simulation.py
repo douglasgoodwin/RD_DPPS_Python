@@ -448,10 +448,10 @@ class PolyDispDPBrownianSimulation:
         self._save_state(1)
         
         # Store trajectory of particle 0
-        self.p1x[0] = self.xorig[0, 1]
-        self.p1y[0] = self.yorig[0, 1]
-        self.p1x[1] = self.xorig[0, 2]
-        self.p1y[1] = self.yorig[0, 2]
+        self.p1x[0] = self.xorig[0, 0]
+        self.p1y[0] = self.yorig[0, 0]
+        self.p1x[1] = self.xorig[0, 1]
+        self.p1y[1] = self.yorig[0, 1]
         
         # Adams-Bashforth for remaining steps
         start_step = checkpoint_file * 60 + 2 if checkpoint_file > 0 else 2
@@ -471,8 +471,8 @@ class PolyDispDPBrownianSimulation:
             self._calculate_autocorrelation(step)
             
             # Store trajectory
-            self.p1x[step] = self.xorig[0, 2]
-            self.p1y[step] = self.yorig[0, 2]
+            self.p1x[step] = self.xorig[0, 1]
+            self.p1y[step] = self.yorig[0, 1]
             
             # Save periodically
             if step % self.save_interval == 0:
