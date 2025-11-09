@@ -1,0 +1,399 @@
+# Google Colab Notebook - Ready to Run
+# =====================================
+# Copy each cell below into separate Colab cells
+
+# ============================================
+# CELL 1: Setup and GPU Check
+# ============================================
+# Check GPU is available and install CuPy
+!nvidia-smi
+
+# Install CuPy for CUDA 12
+!pip install -q cupy-cuda12x scipy matplotlib numba
+
+# Verify installation
+import cupy as cp
+print("\n" + "="*60)
+print("GPU Setup Verification")
+print("="*60)
+print(f"CuPy version: {cp.__version__}")
+print(f"GPU Device: {cp.cuda.Device()}")
+print(f"Compute Capability: {cp.cuda.Device().compute_capability}")
+mem = cp.cuda.Device().mem_info
+print(f"GPU Memory: {mem[1]/1e9:.1f} GB total, {mem[0]/1e9:.1f} GB free")
+print("="*60)
+
+# Quick GPU test
+x = cp.random.random((5000, 5000))
+y = cp.dot(x, x)
+cp.cuda.Stream.null.synchronize()
+print("✓ GPU computation successful!")
+
+
+# ============================================
+# CELL 2: Mount Google Drive (Optional)
+# ============================================
+from google.colab import drive
+drive.mount('/content/drive')
+
+# Create results directory in Drive
+!mkdir -p /content/drive/MyDrive/RD_DPPS_Results
+print("✓ Drive mounted and results directory created")
+
+
+# ============================================
+# CELL 3: Upload and Extract Code
+# ============================================
+from google.colab import files
+import zipfile
+
+# Upload your ZIP file
+print("Please upload RD_DPPS_Python_Translation.zip")
+uploaded = files.upload()
+
+# Extract
+for filename in uploaded.keys():
+    if filename.endswith('.zip'):
+        with zipfile.ZipFile(filename, 'r') as zip_ref:
+            zip_ref.extractall('/content/')
+        print(f"✓ Extracted {filename}")
+
+# Verify files
+!ls -lh /content/*.py | head -15
+
+
+# ============================================
+# CELL 4: Quick GPU Test (~3 minutes)
+# ============================================
+import sys
+sys.path.insert(0, '/content')
+
+from rd_dpps_simulation_gpu import PolyDispDPBrownianSimulationGPU
+import time
+
+print("Starting Quick GPU Test...")
+start_time = time.time()
+
+sim = PolyDispDPBrownianSimulationGPU(
+    N=2000,
+    N1=1000,
+    nx_rd=256,
+    ny_rd=256,
+    max_step_rd=50000,
+    maxc_step=10000,
+    t_final=50.0,
+    delta_t=0.1,
+    output_dir="/content/quick_gpu_test"
+)
+
+sim.run()
+
+total_time = time.time() - start_time
+print(f"\n{'='*60}")
+print(f"✓ Quick test complete in {total_time/60:.1f} minutes!")
+print(f"{'='*60}")
+
+
+# ============================================
+# CELL 5: View Results
+# ============================================
+from IPython.display import Image, display
+from pathlib import Path
+
+output_dir = Path('/content/quick_gpu_test')
+
+# Display all PNG images
+print("Generated Visualizations:")
+print("="*60)
+for img_file in sorted(output_dir.glob('*.png')):
+    print(f"\n{img_file.name}")
+    display(Image(filename=str(img_file), width=800))
+
+
+# ============================================
+# CELL 6: Medium-Scale GPU Run (~10-15 min)
+# ============================================
+from rd_dpps_simulation_gpu import PolyDispDPBrownianSimulationGPU
+import time
+
+print("Starting Medium-Scale GPU Simulation...")
+start_time = time.time()
+
+sim = PolyDispDPBrownianSimulationGPU(
+    N=20000,
+    N1=10000,
+    nx_rd=512,
+    ny_rd=512,
+    max_step_rd=300000,
+    maxc_step=50000,
+    t_final=200.0,
+    output_dir="/content/medium_gpu_run"
+)
+
+sim.run()
+
+total_time = time.time() - start_time
+print(f"\n{'='*60}")
+print(f"✓ Medium run complete in {total_time/60:.1f} minutes!")
+print(f"{'='*60}")
+
+
+# ============================================
+# CELL 7: Benchmark GPU vs CPU
+# ============================================
+from reaction_diffusion_gpu import benchmark_gpu_vs_cpu
+
+print("Benchmarking GPU vs CPU Performance...")
+print("="*60)
+
+# Test on different grid sizes
+for grid_size in [128, 256, 512]:
+    print(f"\nTesting {grid_size}x{grid_size} grid:")
+    benchmark_gpu_vs_cpu(nx=grid_size, ny=grid_size, steps=1000)
+
+
+# ============================================
+# CELL 8: Monitor GPU Memory
+# ============================================
+import cupy as cp
+
+def show_gpu_memory():
+    mem = cp.cuda.Device().mem_info
+    used = (mem[1] - mem[0]) / 1e9
+    total = mem[1] / 1e9
+    percent = (used / total) * 100
+    
+    print(f"GPU Memory Usage:")
+    print(f"  Used: {used:.2f} GB / {total:.2f} GB ({percent:.1f}%)")
+    print(f"  Free: {mem[0]/1e9:.2f} GB")
+    
+    # Show memory pool stats
+    pool = cp.get_default_memory_pool()
+    print(f"  Pool used: {pool.used_bytes()/1e9:.2f} GB")
+    print(f"  Pool total: {pool.total_bytes()/1e9:.2f} GB")
+
+show_gpu_memory()
+
+# Clear memory if needed
+# cp.get_default_memory_pool().free_all_blocks()
+# cp.get_default_pinned_memory_pool().free_all_blocks()
+
+
+# ============================================
+# CELL 9: Create Animation
+# ============================================
+from utils import create_animation
+import numpy as np
+from pathlib import Path
+
+# Create animation from results
+output_dir = Path('/content/quick_gpu_test')
+
+create_animation(
+    output_dir=output_dir,
+    box=np.array([1700, 1700, 2.5]),
+    N1=1000,
+    size_particle=np.loadtxt(output_dir / 'particle_radius.txt'),
+    output_file="simulation.mp4",
+    max_frames=50
+)
+
+# Display video
+from IPython.display import Video
+Video(str(output_dir / 'simulation.mp4'), width=800)
+
+
+# ============================================
+# CELL 10: Analyze Results
+# ============================================
+from utils import analyze_results
+from pathlib import Path
+
+# Analyze quick test results
+print("Analyzing Quick Test Results...")
+analyze_results(Path('/content/quick_gpu_test'))
+
+# Display analysis plots
+from IPython.display import Image, display
+output_dir = Path('/content/quick_gpu_test')
+
+for plot in ['msd.png', 'vacf.png', 'trajectory.png']:
+    plot_path = output_dir / plot
+    if plot_path.exists():
+        print(f"\n{plot}:")
+        display(Image(filename=str(plot_path), width=800))
+
+
+# ============================================
+# CELL 11: Save Results to Drive
+# ============================================
+import shutil
+from pathlib import Path
+
+# Define paths
+source_dir = '/content/quick_gpu_test'
+drive_dir = '/content/drive/MyDrive/RD_DPPS_Results/quick_test'
+
+# Create directory if needed
+!mkdir -p "{drive_dir}"
+
+# Copy results
+!cp -r {source_dir}/* "{drive_dir}/"
+
+print(f"✓ Results saved to: {drive_dir}")
+
+# List what was saved
+!ls -lh "{drive_dir}" | head -20
+
+
+# ============================================
+# CELL 12: Production Run (Optional - takes 2-3 hours)
+# ============================================
+# WARNING: This will use significant Colab GPU time!
+# Make sure you have enough quota before running
+
+from rd_dpps_simulation_gpu import PolyDispDPBrownianSimulationGPU
+import time
+
+print("⚠️  Starting PRODUCTION run - will take 2-3 hours")
+print("="*60)
+
+start_time = time.time()
+
+sim = PolyDispDPBrownianSimulationGPU(
+    N=100000,
+    N1=50000,
+    nx_rd=1024,
+    ny_rd=1024,
+    max_step_rd=1000000,
+    maxc_step=200000,
+    t_final=1000.0,
+    output_dir="/content/production_run"
+)
+
+sim.run()
+
+total_time = time.time() - start_time
+print(f"\n{'='*60}")
+print(f"✓ Production run complete in {total_time/3600:.1f} hours!")
+print(f"{'='*60}")
+
+# Auto-save to Drive
+!cp -r /content/production_run/* /content/drive/MyDrive/RD_DPPS_Results/production/
+print("✓ Results auto-saved to Google Drive")
+
+
+# ============================================
+# CELL 13: Performance Profiling (Advanced)
+# ============================================
+from cupyx.profiler import benchmark
+import cupy as cp
+
+# Profile a specific GPU operation
+def test_laplacian():
+    """Test Laplacian computation speed"""
+    X = cp.random.random((1024, 1024))
+    
+    # Compute 2D Laplacian
+    laplacian = (
+        X[2:, 1:-1] - 2*X[1:-1, 1:-1] + X[:-2, 1:-1] +
+        X[1:-1, 2:] - 2*X[1:-1, 1:-1] + X[1:-1, :-2]
+    )
+    return laplacian
+
+# Benchmark
+result = benchmark(test_laplacian, n_repeat=100)
+print(f"Laplacian computation:")
+print(f"  Mean time: {result.gpu_times.mean()*1000:.3f} ms")
+print(f"  Std dev: {result.gpu_times.std()*1000:.3f} ms")
+
+
+# ============================================
+# CELL 14: Download Results from Colab
+# ============================================
+from google.colab import files
+import zipfile
+import os
+
+# Create ZIP of results
+result_dirs = ['/content/quick_gpu_test', '/content/medium_gpu_run']
+
+for result_dir in result_dirs:
+    if os.path.exists(result_dir):
+        zip_name = f"{os.path.basename(result_dir)}.zip"
+        
+        # Create ZIP
+        !cd /content && zip -r {zip_name} {os.path.basename(result_dir)}
+        
+        # Download
+        print(f"Downloading {zip_name}...")
+        files.download(f'/content/{zip_name}')
+
+print("✓ All results downloaded!")
+
+
+# ============================================
+# CELL 15: Clean Up
+# ============================================
+# Clear GPU memory
+import cupy as cp
+cp.get_default_memory_pool().free_all_blocks()
+cp.get_default_pinned_memory_pool().free_all_blocks()
+
+print("✓ GPU memory cleared")
+
+# Optionally delete local results (keep Drive copy)
+# !rm -rf /content/quick_gpu_test
+# !rm -rf /content/medium_gpu_run
+
+print("✓ Cleanup complete")
+
+
+# ============================================
+# BONUS: Custom Parameter Sweep
+# ============================================
+from rd_dpps_simulation_gpu import PolyDispDPBrownianSimulationGPU
+import time
+
+# Sweep over Peclet numbers
+Pe_values = [10, 20, 30]
+
+for Pe in Pe_values:
+    print(f"\n{'='*60}")
+    print(f"Running simulation with Pe = {Pe}")
+    print(f"{'='*60}")
+    
+    start = time.time()
+    
+    sim = PolyDispDPBrownianSimulationGPU(
+        N=5000,
+        N1=2500,
+        nx_rd=256,
+        ny_rd=256,
+        max_step_rd=100000,
+        maxc_step=20000,
+        t_final=100.0,
+        Pe=Pe,
+        output_dir=f"/content/Pe_sweep/Pe_{Pe}"
+    )
+    
+    sim.run()
+    
+    elapsed = time.time() - start
+    print(f"✓ Pe={Pe} complete in {elapsed/60:.1f} min")
+
+print("\n✓ Parameter sweep complete!")
+
+# Save all to Drive
+!cp -r /content/Pe_sweep /content/drive/MyDrive/RD_DPPS_Results/
+
+
+# ============================================
+# NOTES:
+# ============================================
+# - Colab's A100 GPU has ~40GB memory
+# - Free tier gives ~12 hours GPU time per day
+# - Pro/Pro+ tiers give more GPU time
+# - Save results to Drive frequently
+# - Monitor GPU memory to avoid OOM errors
+# - Start with small tests, scale up gradually
